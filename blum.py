@@ -9,14 +9,14 @@ import datetime
 from colorama import init, Fore, Style
 init(autoreset=True)
 
-
-
 start_time = datetime.datetime.now()  # Tentukan waktu mulai saat bot dijalankan
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Blum BOT')
     parser.add_argument('--task', type=str, choices=['y', 'n'], help='Cek and Claim Task (y/n)')
     parser.add_argument('--reff', type=str, choices=['y', 'n'], help='Apakah ingin claim ref? (y/n, default n)')
+    parser.add_argument('--gist', type=str, help='Gist url if available')
+
     args = parser.parse_args()
 
     if args.task is None:
@@ -32,6 +32,18 @@ def parse_arguments():
         args.reff = reff_input if reff_input in ['y', 'n'] else 'n'
 
     return args
+
+def get_content_from_local_file(file_path):
+    with open(file_path, 'r') as file:
+        return file.read().splitlines()
+
+def get_content_from_gist(gist_url):
+    response = requests.get(gist_url)
+    if response.status_code == 200:
+        return response.text.splitlines()
+    else:
+        raise Exception(f"Failed to fetch content from Gist: {response.status_code}")
+
 
 def check_tasks(token):
     headers = {
@@ -436,8 +448,13 @@ checked_tasks = {}
 args = parse_arguments()
 cek_task_enable = args.task
 claim_ref_enable = args.reff
-with open('tgwebapp.txt', 'r') as file:
-    query_ids = file.read().splitlines()
+file_path = 'tgwebapp.txt'
+
+if args.gist:
+    query_ids = get_content_from_gist(args.gist)
+else:
+    query_ids = get_content_from_local_file(file_path)
+
 while True:
     try:
         print_welcome_message()
@@ -614,7 +631,7 @@ while True:
             sys.stdout.write(f"\r{Fore.CYAN}Menunggu waktu claim berikutnya dalam {Fore.CYAN}{Fore.WHITE}{detik // 60} menit {Fore.WHITE}{detik % 60} detik")
             sys.stdout.flush()
             time.sleep(1)
-        sys.stdout.write("\rWaktu claim berikutnya telah tiba!                                                          \n")
+        sys.stdout.write("\rWaktu claim berikutnya telah tiba!\n")
     except KeyboardInterrupt:
         print(f"\n{Fore.RED+Style.BRIGHT}Proses dihentikan paksa oleh anda!")
         break
